@@ -1,4 +1,4 @@
-export type CaseStatus = "analyzing" | "resolved" | "flagged";
+export type CaseStatus = "analyzing" | "resolved" | "flagged" | "failed";
 export type SeverityLevel = "critical" | "high" | "moderate" | "minor";
 
 export interface GeoCoordinate {
@@ -131,6 +131,13 @@ export interface RankedVessel {
   };
   isCulpritSuspect: boolean;
   summaryRationale: string;
+
+  /* ── Populated only for cases produced by the ML pipeline ── */
+  cpaKm?: number; // closest point of approach to the estimated origin
+  mlScore?: number; // raw 0-1 evidence index (NOT a calibrated probability)
+  mlTier?: "priority_suspect" | "possible" | "low";
+  flags?: string[];
+  mlEvidence?: Record<string, number>; // all 8 raw f_* features
 }
 
 export interface System3Data {
@@ -139,6 +146,25 @@ export interface System3Data {
   spatialSearchRadiusKm: number;
   rankedVessels: RankedVessel[];
   primarySuspect: RankedVessel;
+}
+
+/** Live progress of a backend pipeline run (ML cases only). */
+export interface PipelineProgress {
+  status: string; // system1_pending | system2_pending | system3_pending | completed | unresolved
+  stagesDone: number; // 0-3 engines that have written results
+  finished: boolean;
+  error: string | null;
+}
+
+/** Provenance + honesty metadata from the ML service (ML cases only). */
+export interface MlMeta {
+  warnings: string[]; // e.g. "no trained checkpoint loaded", "AIS unavailable"
+  checkpointLoaded: boolean | null;
+  coverageNote: string | null;
+  forcing: { currents?: string; wind?: string; windage_pct?: number } | null;
+  modelVersions: Record<string, string> | null;
+  dossierSummary: Record<string, unknown> | null;
+  error: string | null;
 }
 
 export interface CaseRecord {
@@ -163,6 +189,8 @@ export interface CaseRecord {
   system1: System1Data;
   system2: System2Data;
   system3: System3Data;
+  pipeline?: PipelineProgress;
+  ml?: MlMeta;
 }
 
 export type PipelineStage = "idle" | "system1_detection" | "system2_drift" | "system3_attribution" | "completed";
