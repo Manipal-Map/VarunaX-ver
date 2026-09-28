@@ -1,40 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { validateApiKey } from "@/lib/auth";
-import { emitIncidentUpdate } from "@/lib/events";
 import { IncidentStatus } from "@prisma/client";
-import { MOCK_INCIDENTS } from "../../../../../../../scripts/mock-data";
+import { systemPushHandler, SlickObservationSchema } from "@/lib/system-route";
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const authError = validateApiKey(request);
-    if (authError) return authError;
-
-    const { id } = params;
-    const hardcodedPayload = MOCK_INCIDENTS[0].system1;
-
-    const incident = await prisma.incident.update({
-      where: { id },
-      data: {
-        system1: hardcodedPayload as any,
-        status: IncidentStatus.system2_pending,
-      },
-    });
-
-    emitIncidentUpdate({
-      incidentId: id,
-      system: "system1",
-      status: incident.status,
-      payload: hardcodedPayload as any,
-      timestamp: new Date().toISOString()
-    });
-
-    return NextResponse.json(incident);
-  } catch (error) {
-    console.error("Error updating system1:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
+// Body = ML Contract A (SlickObservation) — the output of POST /v1/engine1/detect
+export const POST = systemPushHandler(
+  "system1",
+  IncidentStatus.system2_pending,
+  SlickObservationSchema,
+  (p) => ({
+    slick_id: p.slick_id,
+    scene_id: p.scene_id,
+    observation_time: p.t_sat_utc,
+    latitude: p.centroid[1],
+    longitude: p.centroid[0],
+    crs: "EPSG:4326",
+  })
+);
