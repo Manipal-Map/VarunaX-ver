@@ -1,25 +1,23 @@
 import React from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MOCK_CASES } from "@/data/mockCases";
+import { fetchCase } from "@/lib/api";
 import CaseDossierView from "@/components/cases/CaseDossierView";
 import FloatingNavbar from "@/components/common/FloatingNavbar";
 import Footer from "@/components/common/Footer";
 import { ArrowLeft } from "lucide-react";
 
+// Live incidents are created at runtime, so this page can no longer be
+// pre-rendered from MOCK_CASES (generateStaticParams was removed).
+export const dynamic = "force-dynamic";
+
 interface CasePageProps {
   params: Promise<{ id: string }>;
 }
 
-export function generateStaticParams() {
-  return MOCK_CASES.map((c) => ({
-    id: c.id,
-  }));
-}
-
 export default async function CasePage({ params }: CasePageProps) {
   const { id } = await params;
-  const caseData = MOCK_CASES.find((c) => c.id === id);
+  const caseData = await fetchCase(id); // demo case, or live case from the backend
 
   if (!caseData) {
     notFound();
