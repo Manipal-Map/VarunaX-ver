@@ -1,12 +1,18 @@
 import React, { Suspense } from "react";
 import Link from "next/link";
-import { MOCK_CASES } from "@/data/mockCases";
+import { fetchCases } from "@/lib/api";
 import DashboardClient from "@/components/dashboard/DashboardClient";
+import ScanUploadCard from "@/components/dashboard/ScanUploadCard";
 import FloatingNavbar from "@/components/common/FloatingNavbar";
 import Footer from "@/components/common/Footer";
-import { Activity, ArrowLeft, Waves } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
-export default function DashboardPage() {
+// Cases now come from the backend at request time (not build time).
+export const dynamic = "force-dynamic";
+
+export default async function DashboardPage() {
+  const cases = await fetchCases(); // live ML cases first, then bundled demo cases
+
   return (
     <main className="min-h-screen bg-slate-50 flex flex-col">
       {/* Floating Navbar */}
@@ -24,8 +30,12 @@ export default function DashboardPage() {
             <span className="text-slate-800 font-semibold">Operations Dashboard</span>
           </div>
 
+          <div className="mb-8">
+            <ScanUploadCard />
+          </div>
+
           <Suspense fallback={<div className="p-12 text-center text-xs text-slate-500">Loading Surveillance Dashboard...</div>}>
-            <DashboardClient initialCases={MOCK_CASES} />
+            <DashboardClient initialCases={cases} />
           </Suspense>
         </div>
       </div>
