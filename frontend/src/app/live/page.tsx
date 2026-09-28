@@ -1,10 +1,13 @@
 import React, { Suspense } from "react";
 import Link from "next/link";
 import { MOCK_CASES } from "@/data/mockCases";
+import { fetchCase, isLiveIncidentId } from "@/lib/api";
 import LivePipelineView from "@/components/live/LivePipelineView";
 import FloatingNavbar from "@/components/common/FloatingNavbar";
 import Footer from "@/components/common/Footer";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, AlertTriangle } from "lucide-react";
+
+export const dynamic = "force-dynamic";
 
 interface LivePageProps {
   searchParams: Promise<{ caseId?: string }>;
@@ -13,9 +16,31 @@ interface LivePageProps {
 async function LiveContent({ searchParams }: LivePageProps) {
   const params = await searchParams;
   const targetId = params.caseId || "case-northsea-live-2026";
-  const caseRecord = MOCK_CASES.find((c) => c.id === targetId) || MOCK_CASES[2];
+  const isReal = isLiveIncidentId(targetId);
+  const record = await fetchCase(targetId);
 
-  return <LivePipelineView caseRecord={caseRecord} />;
+  // A real incident that can't be loaded must NOT silently fall back to a demo case.
+  if (!record && isReal) {
+    return (
+      <div className="p-8 bg-white rounded-3xl border border-rose-200 text-sm text-rose-800 flex items-start gap-3">
+        <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+        <div>
+          <div className="font-bold mb-1">Could not load incident {targetId}</div>
+          <p className="text-xs leading-relaxed">
+            The backend did not return this incident. Check that it is running and that NEXT_PUBLIC_API_URL points to it.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <LivePipelineView
+      key={targetId}
+      caseRecord={record ?? MOCK_CASES[2]}
+      realRun={isReal}
+    />
+  );
 }
 
 export default function LivePage({ searchParams }: LivePageProps) {
