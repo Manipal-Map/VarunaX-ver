@@ -1,12 +1,12 @@
 import { EventEmitter } from "events";
 
-const globalForEvents = globalThis as unknown as { bus: EventEmitter };
-const bus = globalForEvents.bus || new EventEmitter();
-
-if (process.env.NODE_ENV !== "production") {
-  globalForEvents.bus = bus;
-}
-
+// Cache the bus on globalThis in EVERY environment (the old version only did
+// it in dev). Next.js can bundle routes separately in production; the pipeline
+// runner and the SSE stream route must share ONE bus or live updates never
+// reach the browser.
+const globalForEvents = globalThis as unknown as { __varunaBus?: EventEmitter };
+const bus = globalForEvents.__varunaBus ?? new EventEmitter();
+globalForEvents.__varunaBus = bus;
 bus.setMaxListeners(100);
 
 export interface IncidentEvent {
